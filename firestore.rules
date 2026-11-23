@@ -1,0 +1,349 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'shashankhs057@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll([
+        'id', 'name', 'nameFr', 'nameEs', 'category', 'price', 'stockCount',
+        'reorderThreshold', 'parLevel', 'unit', 'autoReorder', 'supplier',
+        'description', 'descriptionFr', 'descriptionEs', 'allergens', 'image',
+        'prepTimeMins', 'active', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'id', 'name', 'nameFr', 'nameEs', 'category', 'price', 'stockCount',
+        'reorderThreshold', 'parLevel', 'unit', 'autoReorder', 'supplier',
+        'description', 'descriptionFr', 'descriptionEs', 'allergens', 'image',
+        'prepTimeMins', 'active', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+      data.nameFr is string && data.nameFr.size() >= 1 && data.nameFr.size() <= 120 &&
+      data.nameEs is string && data.nameEs.size() >= 1 && data.nameEs.size() <= 120 &&
+      data.category in ['bread', 'pastry', 'cake'] &&
+      data.price is number && data.price >= 0 && data.price <= 10000 &&
+      data.stockCount is int && data.stockCount >= 0 && data.stockCount <= 100000 &&
+      data.reorderThreshold is int && data.reorderThreshold >= 0 && data.reorderThreshold <= 10000 &&
+      data.parLevel is int && data.parLevel >= 0 && data.parLevel <= 100000 &&
+      data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 32 &&
+      data.autoReorder is bool &&
+      data.supplier is string && data.supplier.size() >= 1 && data.supplier.size() <= 120 &&
+      data.description is string && data.description.size() >= 1 && data.description.size() <= 600 &&
+      data.descriptionFr is string && data.descriptionFr.size() >= 1 && data.descriptionFr.size() <= 600 &&
+      data.descriptionEs is string && data.descriptionEs.size() >= 1 && data.descriptionEs.size() <= 600 &&
+      data.allergens is list && data.allergens.size() <= 10 &&
+      (data.allergens.size() == 0 || (data.allergens[0] is string && data.allergens[0].size() <= 40)) &&
+      data.image is string && data.image.size() >= 1 && data.image.size() <= 500 &&
+      data.prepTimeMins is int && data.prepTimeMins >= 0 && data.prepTimeMins <= 10080 &&
+      data.active is bool &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidIngredient(data) {
+      return data.keys().hasAll([
+        'id', 'name', 'unit', 'currentStock', 'reorderPoint', 'parLevel',
+        'unitCost', 'supplier', 'autoReorder', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'id', 'name', 'unit', 'currentStock', 'reorderPoint', 'parLevel',
+        'unitCost', 'supplier', 'autoReorder', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+      data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 32 &&
+      data.currentStock is number && data.currentStock >= 0 && data.currentStock <= 1000000 &&
+      data.reorderPoint is number && data.reorderPoint >= 0 && data.reorderPoint <= 100000 &&
+      data.parLevel is number && data.parLevel >= 0 && data.parLevel <= 1000000 &&
+      data.unitCost is number && data.unitCost >= 0 && data.unitCost <= 10000 &&
+      data.supplier is string && data.supplier.size() >= 1 && data.supplier.size() <= 120 &&
+      data.autoReorder is bool &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidPurchaseOrder(data) {
+      return data.keys().hasAll([
+        'id', 'itemId', 'itemName', 'itemType', 'quantity', 'unit',
+        'supplier', 'status', 'triggeredBy', 'createdAt', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'id', 'itemId', 'itemName', 'itemType', 'quantity', 'unit',
+        'supplier', 'status', 'triggeredBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.itemId) &&
+      data.itemName is string && data.itemName.size() >= 1 && data.itemName.size() <= 120 &&
+      data.itemType in ['product', 'ingredient'] &&
+      data.quantity is number && data.quantity > 0 && data.quantity <= 100000 &&
+      data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 32 &&
+      data.supplier is string && data.supplier.size() >= 1 && data.supplier.size() <= 120 &&
+      data.status in ['pending', 'ordered', 'received'] &&
+      data.triggeredBy in ['auto', 'manual'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll([
+        'uid', 'email', 'displayName', 'phone', 'address', 'language',
+        'emailNotifications', 'pushNotifications', 'loyaltyPoints',
+        'loyaltyTier', 'createdAt', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'uid', 'email', 'displayName', 'phone', 'address', 'language',
+        'emailNotifications', 'pushNotifications', 'loyaltyPoints',
+        'loyaltyTier', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.uid) &&
+      data.uid == userId &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 180 &&
+      data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+      data.phone is string && data.phone.size() <= 40 &&
+      data.address is string && data.address.size() <= 300 &&
+      data.language in ['en', 'fr', 'es'] &&
+      data.emailNotifications is bool &&
+      data.pushNotifications is bool &&
+      data.loyaltyPoints is int && data.loyaltyPoints >= 0 && data.loyaltyPoints <= 1000000 &&
+      data.loyaltyTier in ['crumb', 'artisan', 'patron'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+        'orderNumber', 'userId', 'customerName', 'customerEmail', 'customerPhone',
+        'fulfillmentType', 'pickupSlot', 'deliveryAddress', 'items', 'customCakes',
+        'subtotal', 'discountAmount', 'taxAmount', 'totalAmount',
+        'loyaltyPointsEarned', 'loyaltyPointsRedeemed', 'paymentMethod',
+        'paymentStatus', 'paymentReference', 'status', 'kitchenNotes', 'language',
+        'createdAt', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'orderNumber', 'userId', 'customerName', 'customerEmail', 'customerPhone',
+        'fulfillmentType', 'pickupSlot', 'deliveryAddress', 'items', 'customCakes',
+        'subtotal', 'discountAmount', 'taxAmount', 'totalAmount',
+        'loyaltyPointsEarned', 'loyaltyPointsRedeemed', 'paymentMethod',
+        'paymentStatus', 'paymentReference', 'status', 'kitchenNotes', 'language',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.orderNumber is string && data.orderNumber.size() >= 3 && data.orderNumber.size() <= 40 &&
+      isValidId(data.userId) &&
+      data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120 &&
+      data.customerEmail is string && data.customerEmail.size() >= 3 && data.customerEmail.size() <= 180 &&
+      data.customerPhone is string && data.customerPhone.size() <= 40 &&
+      data.fulfillmentType in ['pickup', 'delivery'] &&
+      data.pickupSlot is string && data.pickupSlot.size() >= 1 && data.pickupSlot.size() <= 80 &&
+      data.deliveryAddress is string && data.deliveryAddress.size() <= 300 &&
+      data.items is list && data.items.size() <= 50 &&
+      (data.items.size() == 0 || data.items[0] is map) &&
+      data.customCakes is list && data.customCakes.size() <= 10 &&
+      (data.customCakes.size() == 0 || data.customCakes[0] is map) &&
+      (data.items.size() > 0 || data.customCakes.size() > 0) &&
+      data.subtotal is number && data.subtotal >= 0 && data.subtotal <= 50000 &&
+      data.discountAmount is number && data.discountAmount >= 0 && data.discountAmount <= 50000 &&
+      data.taxAmount is number && data.taxAmount >= 0 && data.taxAmount <= 10000 &&
+      data.totalAmount is number && data.totalAmount >= 0 && data.totalAmount <= 60000 &&
+      data.loyaltyPointsEarned is int && data.loyaltyPointsEarned >= 0 && data.loyaltyPointsEarned <= 500000 &&
+      data.loyaltyPointsRedeemed is int && data.loyaltyPointsRedeemed >= 0 && data.loyaltyPointsRedeemed <= 500000 &&
+      data.paymentMethod in ['card', 'apple_pay', 'counter'] &&
+      data.paymentStatus in ['paid', 'pending_counter'] &&
+      data.paymentReference is string && data.paymentReference.size() >= 3 && data.paymentReference.size() <= 100 &&
+      data.status in ['confirmed', 'baking', 'finishing', 'ready', 'completed', 'cancelled'] &&
+      data.kitchenNotes is string && data.kitchenNotes.size() <= 500 &&
+      data.language in ['en', 'fr', 'es'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll([
+        'userId', 'orderId', 'orderNumber', 'channel', 'recipientEmail',
+        'subject', 'body', 'deliveryStatus', 'read', 'createdAt'
+      ]) && data.keys().hasOnly([
+        'userId', 'orderId', 'orderNumber', 'channel', 'recipientEmail',
+        'subject', 'body', 'deliveryStatus', 'read', 'createdAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.orderId is string && data.orderId.size() <= 128 &&
+      data.orderNumber is string && data.orderNumber.size() <= 40 &&
+      data.channel in ['email', 'push', 'system'] &&
+      data.recipientEmail is string && data.recipientEmail.size() <= 180 &&
+      data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 180 &&
+      data.body is string && data.body.size() >= 1 && data.body.size() <= 1000 &&
+      data.deliveryStatus in ['sent', 'queued', 'logged'] &&
+      data.read is bool &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidBackupSnapshot(data) {
+      return data.keys().hasAll([
+        'label', 'createdByEmail', 'productCount', 'orderCount',
+        'ingredientCount', 'checksum', 'payload', 'createdAt'
+      ]) && data.keys().hasOnly([
+        'label', 'createdByEmail', 'productCount', 'orderCount',
+        'ingredientCount', 'checksum', 'payload', 'createdAt'
+      ]) &&
+      data.label is string && data.label.size() >= 1 && data.label.size() <= 120 &&
+      data.createdByEmail is string && data.createdByEmail.size() >= 3 && data.createdByEmail.size() <= 180 &&
+      data.productCount is int && data.productCount >= 0 &&
+      data.orderCount is int && data.orderCount >= 0 &&
+      data.ingredientCount is int && data.ingredientCount >= 0 &&
+      data.checksum is string && data.checksum.size() >= 4 && data.checksum.size() <= 128 &&
+      data.payload is string && data.payload.size() >= 2 && data.payload.size() <= 500000 &&
+      data.createdAt is timestamp;
+    }
+
+    match /test/connection {
+      allow get: if true;
+      allow write: if false;
+    }
+
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isOwner(adminId);
+      allow list, write: if false;
+    }
+
+    match /products/{productId} {
+      allow get: if isValidId(productId);
+      allow list: if true;
+      allow create: if isValidId(productId) && isAdmin() && isValidProduct(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(productId) && isValidProduct(incoming()) && incoming().updatedAt == request.time && (
+        isAdmin() ||
+        (
+          isVerifiedUser() &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['stockCount', 'updatedAt']) &&
+          incoming().stockCount <= existing().stockCount
+        )
+      );
+      allow delete: if isValidId(productId) && isAdmin();
+    }
+
+    match /ingredients/{ingredientId} {
+      allow get: if isValidId(ingredientId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(ingredientId) && isAdmin() && isValidIngredient(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(ingredientId) && isAdmin() && isValidIngredient(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(ingredientId) && isAdmin();
+    }
+
+    match /purchaseOrders/{poId} {
+      allow get: if isValidId(poId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(poId) && isAdmin() && isValidPurchaseOrder(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(poId) && isAdmin() && isValidPurchaseOrder(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(poId) && isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(userId) && isOwner(userId) &&
+        isValidUserProfile(incoming(), userId) &&
+        incoming().loyaltyPoints == 0 &&
+        incoming().loyaltyTier == 'crumb' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(userId) && isValidUserProfile(incoming(), userId) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().uid == existing().uid &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().loyaltyPoints <= existing().loyaltyPoints + 5000 &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'phone', 'address', 'language',
+              'emailNotifications', 'pushNotifications', 'loyaltyPoints',
+              'loyaltyTier', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && (isAdmin() || (isVerifiedUser() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.userId == request.auth.uid);
+      allow create: if isValidId(orderId) && isVerifiedUser() &&
+        isValidOrder(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'confirmed' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(orderId) && isValidOrder(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().userId == existing().userId &&
+        incoming().orderNumber == existing().orderNumber &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            isOwner(existing().userId) &&
+            existing().status == 'confirmed' &&
+            incoming().status == 'cancelled' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    match /notifications/{notifId} {
+      allow get: if isValidId(notifId) && (isAdmin() || (isVerifiedUser() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.userId == request.auth.uid);
+      allow create: if isValidId(notifId) && isVerifiedUser() &&
+        isValidNotification(incoming()) &&
+        (isAdmin() || incoming().userId == request.auth.uid) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(notifId) && isVerifiedUser() &&
+        isValidNotification(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().userId == existing().userId && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['read'])
+          )
+        );
+      allow delete: if isValidId(notifId) && isAdmin();
+    }
+
+    match /backups/{backupId} {
+      allow get: if isValidId(backupId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(backupId) && isAdmin() && isValidBackupSnapshot(incoming()) &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(backupId) && isAdmin();
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Hearth & Crumb",
+  "description": "Artisanal local bakery online ordering, custom cake studio, loyalty program, and real-time kitchen inventory platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

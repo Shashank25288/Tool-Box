@@ -1,0 +1,213 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Bakery Product",
+      "description": "Artisanal bread, pastry, or signature cake item in the bakery catalog with real-time inventory tracking.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "nameFr": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "nameEs": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "category": { "type": "string", "enum": ["bread", "pastry", "cake"] },
+        "price": { "type": "number" },
+        "stockCount": { "type": "integer" },
+        "reorderThreshold": { "type": "integer" },
+        "parLevel": { "type": "integer" },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "autoReorder": { "type": "boolean" },
+        "supplier": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "descriptionFr": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "descriptionEs": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "allergens": { "type": "array" },
+        "image": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "prepTimeMins": { "type": "integer" },
+        "active": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "name", "nameFr", "nameEs", "category", "price", "stockCount",
+        "reorderThreshold", "parLevel", "unit", "autoReorder", "supplier",
+        "description", "descriptionFr", "descriptionEs", "allergens", "image",
+        "prepTimeMins", "active", "updatedAt"
+      ]
+    },
+    "Ingredient": {
+      "title": "Baking Ingredient",
+      "description": "Raw ingredient inventory tracked for automated stock replenishment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "currentStock": { "type": "number" },
+        "reorderPoint": { "type": "number" },
+        "parLevel": { "type": "number" },
+        "unitCost": { "type": "number" },
+        "supplier": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "autoReorder": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "name", "unit", "currentStock", "reorderPoint", "parLevel",
+        "unitCost", "supplier", "autoReorder", "updatedAt"
+      ]
+    },
+    "PurchaseOrder": {
+      "title": "Supplier Purchase Order",
+      "description": "Automated or manual stock replenishment order dispatched to suppliers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "itemId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "itemName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "itemType": { "type": "string", "enum": ["product", "ingredient"] },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "supplier": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "status": { "type": "string", "enum": ["pending", "ordered", "received"] },
+        "triggeredBy": { "type": "string", "enum": ["auto", "manual"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "itemId", "itemName", "itemType", "quantity", "unit",
+        "supplier", "status", "triggeredBy", "createdAt", "updatedAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "Customer User Profile",
+      "description": "Private customer account settings, delivery info, and loyalty balance.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "minLength": 3, "maxLength": 180 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "address": { "type": "string", "maxLength": 300 },
+        "language": { "type": "string", "enum": ["en", "fr", "es"] },
+        "emailNotifications": { "type": "boolean" },
+        "pushNotifications": { "type": "boolean" },
+        "loyaltyPoints": { "type": "integer" },
+        "loyaltyTier": { "type": "string", "enum": ["crumb", "artisan", "patron"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid", "email", "displayName", "phone", "address", "language",
+        "emailNotifications", "pushNotifications", "loyaltyPoints",
+        "loyaltyTier", "createdAt", "updatedAt"
+      ]
+    },
+    "Order": {
+      "title": "Bakery Order",
+      "description": "Customer online bread, pastry, and custom cake order with real-time kitchen status.",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "customerEmail": { "type": "string", "minLength": 3, "maxLength": 180 },
+        "customerPhone": { "type": "string", "maxLength": 40 },
+        "fulfillmentType": { "type": "string", "enum": ["pickup", "delivery"] },
+        "pickupSlot": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "deliveryAddress": { "type": "string", "maxLength": 300 },
+        "items": { "type": "array" },
+        "customCakes": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "loyaltyPointsEarned": { "type": "integer" },
+        "loyaltyPointsRedeemed": { "type": "integer" },
+        "paymentMethod": { "type": "string", "enum": ["card", "apple_pay", "counter"] },
+        "paymentStatus": { "type": "string", "enum": ["paid", "pending_counter"] },
+        "paymentReference": { "type": "string", "minLength": 3, "maxLength": 100 },
+        "status": { "type": "string", "enum": ["confirmed", "baking", "finishing", "ready", "completed", "cancelled"] },
+        "kitchenNotes": { "type": "string", "maxLength": 500 },
+        "language": { "type": "string", "enum": ["en", "fr", "es"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "orderNumber", "userId", "customerName", "customerEmail", "customerPhone",
+        "fulfillmentType", "pickupSlot", "deliveryAddress", "items", "customCakes",
+        "subtotal", "discountAmount", "taxAmount", "totalAmount",
+        "loyaltyPointsEarned", "loyaltyPointsRedeemed", "paymentMethod",
+        "paymentStatus", "paymentReference", "status", "kitchenNotes", "language",
+        "createdAt", "updatedAt"
+      ]
+    },
+    "NotificationLog": {
+      "title": "Email and Push Notification Log",
+      "description": "Dispatched automated email and push notification record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "orderId": { "type": "string", "maxLength": 128 },
+        "orderNumber": { "type": "string", "maxLength": 40 },
+        "channel": { "type": "string", "enum": ["email", "push", "system"] },
+        "recipientEmail": { "type": "string", "maxLength": 180 },
+        "subject": { "type": "string", "minLength": 1, "maxLength": 180 },
+        "body": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "deliveryStatus": { "type": "string", "enum": ["sent", "queued", "logged"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "orderId", "orderNumber", "channel", "recipientEmail",
+        "subject", "body", "deliveryStatus", "read", "createdAt"
+      ]
+    },
+    "BackupSnapshot": {
+      "title": "Cloud Backup Snapshot",
+      "description": "Cloud-stored snapshot metadata and JSON archive of bakery state.",
+      "type": "object",
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "createdByEmail": { "type": "string", "minLength": 3, "maxLength": 180 },
+        "productCount": { "type": "integer" },
+        "orderCount": { "type": "integer" },
+        "ingredientCount": { "type": "integer" },
+        "checksum": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "payload": { "type": "string", "minLength": 2, "maxLength": 500000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "label", "createdByEmail", "productCount", "orderCount",
+        "ingredientCount", "checksum", "payload", "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Public bakery product catalog and real-time stock quantities."
+    },
+    "/ingredients/{ingredientId}": {
+      "schema": { "$ref": "#/entities/Ingredient" },
+      "description": "Staff-only raw ingredient stock and automated reorder levels."
+    },
+    "/purchaseOrders/{poId}": {
+      "schema": { "$ref": "#/entities/PurchaseOrder" },
+      "description": "Staff-only supplier replenishment purchase orders."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-isolated customer account profiles, preferences, and loyalty points."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer bread and custom cake orders with real-time status tracking."
+    },
+    "/notifications/{notifId}": {
+      "schema": { "$ref": "#/entities/NotificationLog" },
+      "description": "Owner-isolated automated email and push notification logs."
+    },
+    "/backups/{backupId}": {
+      "schema": { "$ref": "#/entities/BackupSnapshot" },
+      "description": "Admin-only cloud-based data backup snapshots."
+    }
+  }
+}
